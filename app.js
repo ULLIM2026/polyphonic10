@@ -113,13 +113,8 @@ function Polyphonic() {
         };
     }, [targetHashtag, musics, composers, genres, instruments, concepts]);
 
-    const handleImgUpload = (e, type) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setForms(prev => ({ ...prev, [type]: { ...prev[type], photo: reader.result } }));
-            reader.readAsDataURL(file);
-        }
+    const handleImgUrl = (url, type) => {
+        setForms(prev => ({ ...prev, [type]: { ...prev[type], photo: url } }));
     };
 
     const openAddModal = () => {
@@ -279,12 +274,10 @@ function Polyphonic() {
             {/* ══ 모달: 작곡가 ══ */}
             {showModal.comp && <div className="modal-overlay"><div className="modal-content scroll-container">
                 <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>작곡가 등록</h2>
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div style={{ width: 120, height: 120, borderRadius: 15, background: '#f5f5f5', margin: '0 auto 10px', overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-                        {forms.comp.photo && <img src={forms.comp.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <input type="file" id="c-img" hidden onChange={(e) => handleImgUpload(e, 'comp')} />
-                    <label htmlFor="c-img" style={{ fontSize: 12, color: ACCENT, fontWeight: 700, cursor: 'pointer' }}>(1) 사진 업로드</label>
+                <div style={{ marginBottom: 20 }}>
+                    {forms.comp.photo && <img src={forms.comp.photo} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: 12, marginBottom: 8, border: `1px solid ${BORDER}` }} onError={e => e.target.style.display='none'} />}
+                    <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>사진 URL</label>
+                    <input type="text" placeholder="이미지 주소를 붙여넣으세요" value={forms.comp.photo || ''} onChange={e => handleImgUrl(e.target.value, 'comp')} style={{ width: '100%', padding: 12, border: `1px solid ${BORDER}`, borderRadius: 12, outline: 'none', fontSize: 14 }} />
                 </div>
                 <Input label="이름"        value={forms.comp.name}        onChange={v => setForms({ ...forms, comp: { ...forms.comp, name: v } })} />
                 <Input label="설명" isArea value={forms.comp.description} onChange={v => setForms({ ...forms, comp: { ...forms.comp, description: v } })} />
@@ -300,12 +293,10 @@ function Polyphonic() {
             {/* ══ 모달: 장르 ══ */}
             {showModal.genre && <div className="modal-overlay"><div className="modal-content scroll-container">
                 <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>장르 등록</h2>
-                <div style={{ textAlign: 'center', marginBottom: 15 }}>
-                    <div style={{ width: 100, height: 100, borderRadius: 12, background: '#f5f5f5', margin: '0 auto 10px', overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-                        {forms.genre.photo && <img src={forms.genre.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <input type="file" id="g-img" hidden onChange={(e) => handleImgUpload(e, 'genre')} />
-                    <label htmlFor="g-img" style={{ fontSize: 12, color: ACCENT, cursor: 'pointer' }}>이미지 업로드</label>
+                <div style={{ marginBottom: 20 }}>
+                    {forms.genre.photo && <img src={forms.genre.photo} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: 12, marginBottom: 8, border: `1px solid ${BORDER}` }} onError={e => e.target.style.display='none'} />}
+                    <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>사진 URL</label>
+                    <input type="text" placeholder="이미지 주소를 붙여넣으세요" value={forms.genre.photo || ''} onChange={e => handleImgUrl(e.target.value, 'genre')} style={{ width: '100%', padding: 12, border: `1px solid ${BORDER}`, borderRadius: 12, outline: 'none', fontSize: 14 }} />
                 </div>
                 <Input label="이름"        value={forms.genre.name}      onChange={v => setForms({ ...forms, genre: { ...forms.genre, name: v } })} />
                 <Input label="개요" isArea value={forms.genre.summary}   onChange={v => setForms({ ...forms, genre: { ...forms.genre, summary: v } })} />
@@ -319,12 +310,10 @@ function Polyphonic() {
             {/* ══ 모달: 악기 ══ */}
             {showModal.instrument && <div className="modal-overlay"><div className="modal-content scroll-container">
                 <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>악기 추가</h2>
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <div style={{ width: 120, height: 120, borderRadius: 15, background: '#f5f5f5', margin: '0 auto 10px', overflow: 'hidden', border: `1px solid ${BORDER}` }}>
-                        {forms.instrument.photo && <img src={forms.instrument.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                    <input type="file" id="i-img" hidden onChange={(e) => handleImgUpload(e, 'instrument')} />
-                    <label htmlFor="i-img" style={{ fontSize: 12, color: ACCENT, cursor: 'pointer' }}>사진 업로드</label>
+                <div style={{ marginBottom: 20 }}>
+                    {forms.instrument.photo && <img src={forms.instrument.photo} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: 12, marginBottom: 8, border: `1px solid ${BORDER}` }} onError={e => e.target.style.display='none'} />}
+                    <label className="section-label" style={{ display: 'block', marginBottom: 8 }}>사진 URL</label>
+                    <input type="text" placeholder="이미지 주소를 붙여넣으세요" value={forms.instrument.photo || ''} onChange={e => handleImgUrl(e.target.value, 'instrument')} style={{ width: '100%', padding: 12, border: `1px solid ${BORDER}`, borderRadius: 12, outline: 'none', fontSize: 14 }} />
                 </div>
                 <Input label="이름"           value={forms.instrument.name}      onChange={v => setForms({ ...forms, instrument: { ...forms.instrument, name: v } })} />
                 <Input label="개요"    isArea value={forms.instrument.summary}   onChange={v => setForms({ ...forms, instrument: { ...forms.instrument, summary: v } })} />
