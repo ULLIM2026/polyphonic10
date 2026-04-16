@@ -18,6 +18,29 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCB9BxM7Qc580FuWDHj3iAlrFNi5iBy0Po",
+    authDomain: "archive-b031f.firebaseapp.com",
+    projectId: "archive-b031f",
+    storageBucket: "archive-b031f.firebasestorage.app",
+    messagingSenderId: "616679717444",
+    appId: "1:616679717444:web:446bc7d3dcb956c06c5a11",
+    measurementId: "G-YWVC1RSP5L"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
     <div id="root"></div>
     <script type="text/babel" src="app.js"></script>
 </body>
