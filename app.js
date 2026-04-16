@@ -1,4 +1,4 @@
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 
 /* ── Firebase 설정 ── */
 const firebaseConfig = {
@@ -52,6 +52,13 @@ const globalStyle = `
     .hashtag-link { color: ${ACCENT}; font-weight: 700; cursor: pointer; margin-right: 8px; text-decoration: none; }
     .hashtag-link:hover { text-decoration: underline; }
     .hashtag-group-title { font-size: 12px; font-weight: 800; color: #333; margin: 25px 0 10px; padding-left: 10px; border-left: 3px solid ${ACCENT}; }
+
+    /* 로그인 화면 */
+    .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; }
+    .login-btn { display: flex; align-items: center; gap: 12px; padding: 14px 28px; border: 1px solid ${BORDER}; border-radius: 12px; background: #fff; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: box-shadow 0.2s; }
+    .login-btn:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .saving-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4CAF50; margin-left: 6px; vertical-align: middle; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 `;
 
 /* ── Data Schemas ── */
@@ -62,22 +69,65 @@ const EMPTY_INSTRUMENT = { id: null, name: "", photo: null, summary: "", detail:
 const EMPTY_CONCEPT    = { id: null, name: "", summary: "", detail: "", usage: "", anecdotes: "", scraps: "", hashtags: "" };
 
 function Polyphonic() {
+    /* ── Auth & 로딩 상태 ── */
+    const [user,        setUser]        = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [saving,      setSaving]      = useState(false);
+    const syncEnabled = useRef(false); // Firestore에서 로드 완료 전엔 sync 비활성화
+
     const [activeTab, setActiveTab] = useState("library");
     const [view, setView] = useState("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [targetHashtag, setTargetHashtag] = useState("");
 
-    const [musics,      setMusics]      = useState(() => JSON.parse(localStorage.getItem('p_musics'))      || []);
-    const [composers,   setComposers]   = useState(() => JSON.parse(localStorage.getItem('p_composers'))   || []);
-    const [genres,      setGenres]      = useState(() => JSON.parse(localStorage.getItem('p_genres'))      || []);
-    const [instruments, setInstruments] = useState(() => JSON.parse(localStorage.getItem('p_instruments')) || []);
-    const [concepts,    setConcepts]    = useState(() => JSON.parse(localStorage.getItem('p_concepts'))    || []);
+    /* ── 데이터 상태 (초기값 빈 배열 → Firestore에서 로드) ── */
+    const [musics,      setMusics]      = useState([]);
+    const [composers,   setComposers]   = useState([]);
+    const [genres,      setGenres]      = useState([]);
+    const [instruments, setInstruments] = useState([]);
+    const [concepts,    setConcepts]    = useState([]);
 
-    useEffect(() => { localStorage.setItem('p_musics',      JSON.stringify(musics));      }, [musics]);
-    useEffect(() => { localStorage.setItem('p_composers',   JSON.stringify(composers));   }, [composers]);
-    useEffect(() => { localStorage.setItem('p_genres',      JSON.stringify(genres));      }, [genres]);
-    useEffect(() => { localStorage.setItem('p_instruments', JSON.stringify(instruments)); }, [instruments]);
-    useEffect(() => { localStorage.setItem('p_concepts',    JSON.stringify(concepts));    }, [concepts]);
+    /* ── 1. 인증 상태 감지 & Firestore에서 데이터 로드 ── */
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (u) => {
+            setUser(u);
+            if (u) {
+                try {
+                    const snap = await db.collection('users').doc(u.uid).get();
+                    if (snap.exists) {
+                        const d = snap.data();
+                        if (d.musics)      setMusics(d.musics);
+                        if (d.composers)   setComposers(d.composers);
+                        if (d.genres)      setGenres(d.genres);
+                        if (d.instruments) setInstruments(d.instruments);
+                        if (d.concepts)    setConcepts(d.concepts);
+                    }
+                } catch (e) {
+                    console.error("Firestore 로드 오류:", e);
+                }
+            } else {
+                // 로그아웃 시 데이터 초기화
+                setMusics([]); setComposers([]); setGenres([]); setInstruments([]); setConcepts([]);
+                syncEnabled.current = false;
+            }
+            syncEnabled.current = true; // 로드 완료 후 sync 활성화
+            setAuthLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
+    /* ── 2. 데이터 변경 시 Firestore에 자동 저장 ── */
+    useEffect(() => {
+        if (!syncEnabled.current || !user) return;
+        setSaving(true);
+        const timer = setTimeout(() => {
+            db.collection('users').doc(user.uid)
+                .set({ musics, composers, genres, instruments, concepts })
+                .then(() => setSaving(false))
+                .catch(e => { console.error("저장 오류:", e); setSaving(false); });
+        }, 800); // 800ms 디바운스 (연속 입력 시 과도한 쓰기 방지)
+        return () => clearTimeout(timer);
+    }, [musics, composers, genres, instruments, concepts]);
 
     const [showModal, setShowModal] = useState({ music: false, comp: false, genre: false, instrument: false, concept: false });
     const [forms, setForms] = useState({ music: EMPTY_MUSIC, comp: EMPTY_COMPOSER, genre: EMPTY_GENRE, instrument: EMPTY_INSTRUMENT, concept: EMPTY_CONCEPT });
@@ -124,6 +174,36 @@ function Polyphonic() {
         setShowModal(prev => ({ ...prev, [key]: true }));
     };
 
+    /* ── 로딩 화면 ── */
+    if (authLoading) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+                <div style={{ fontWeight: 900, fontSize: 24 }}>POLY<span style={{ color: ACCENT }}>PHONIC</span></div>
+                <div style={{ fontSize: 13, color: '#aaa' }}>로딩 중...</div>
+            </div>
+        );
+    }
+
+    /* ── 로그인 화면 ── */
+    if (!user) {
+        return (
+            <div>
+                <style>{globalStyle}</style>
+                <div className="login-screen">
+                    <div style={{ fontWeight: 900, fontSize: 36, marginBottom: 8 }}>POLY<span style={{ color: ACCENT }}>PHONIC</span></div>
+                    <div style={{ fontSize: 14, color: '#888', marginBottom: 48 }}>음악 아카이빙 앱</div>
+                    <button className="login-btn" onClick={() => auth.signInWithPopup(provider)}>
+                        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                        Google로 로그인
+                    </button>
+                    <div style={{ marginTop: 24, fontSize: 12, color: '#bbb', textAlign: 'center', lineHeight: 1.8 }}>
+                        로그인하면 모든 기기에서<br />데이터가 자동으로 동기화됩니다.
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={{ minHeight: "100vh" }}>
             <style>{globalStyle}</style>
@@ -133,10 +213,20 @@ function Polyphonic() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 55 }}>
                     <div onClick={() => { setActiveTab("library"); setView("list"); setSearchQuery(""); }} style={{ cursor: "pointer", fontWeight: 900, fontSize: 20 }}>
                         POLY<span style={{ color: ACCENT }}>PHONIC</span>
+                        {saving && <span className="saving-dot" title="저장 중..." />}
                     </div>
-                    <button onClick={openAddModal} style={{ background: ACCENT, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                        + 추가
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {/* 사용자 아바타 + 로그아웃 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {user.photoURL && <img src={user.photoURL} style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${BORDER}` }} />}
+                            <button onClick={() => auth.signOut()} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: "5px 10px", fontSize: 12, color: '#888', cursor: 'pointer' }}>
+                                로그아웃
+                            </button>
+                        </div>
+                        <button onClick={openAddModal} style={{ background: ACCENT, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                            + 추가
+                        </button>
+                    </div>
                 </div>
                 <div className="search-container">
                     <input className="search-input" placeholder="무엇이든 검색하세요..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
