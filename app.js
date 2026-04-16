@@ -1,15 +1,21 @@
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+
 const { useState, useEffect, useMemo, useRef } = React;
 
 /* ── Firebase 설정 ── */
 const firebaseConfig = {
-    apiKey: "AIzaSyAEY-T-NRKEotVOaD5nastrhJDfd34SI6Y",
-    authDomain: "polyphonic-b906e.firebaseapp.com",
-    projectId: "polyphonic-b906e",
-    storageBucket: "polyphonic-b906e.firebasestorage.app",
-    messagingSenderId: "128348297020",
-    appId: "1:128348297020:web:b6e42bbe223ac41e087039",
-    measurementId: "G-ZNSYCM09SS"
+  apiKey: "AIzaSyCB9BxM7Qc580FuWDHj3iAlrFNi5iBy0Po",
+  authDomain: "archive-b031f.firebaseapp.com",
+  projectId: "archive-b031f",
+  storageBucket: "archive-b031f.firebasestorage.app",
+  messagingSenderId: "616679717444",
+  appId: "1:616679717444:web:446bc7d3dcb956c06c5a11",
+  measurementId: "G-YWVC1RSP5L"
 };
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
